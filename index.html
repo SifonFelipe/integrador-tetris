@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TETRIS</title>
+    <style>
+        html { overflow: hidden; }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #050510;
+            font-family: 'Press Start 2P', monospace;
+        }
+
+        /* ── Layout principal ─────────────────────────────────── */
+        #wrapper {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+
+        /* ── Tablero ──────────────────────────────────────────── */
+        #board-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .x-titulo {
+            font-size: 1.6em;
+            color: #AAAAFF;
+            letter-spacing: 10px;
+            text-shadow: 0 0 16px #6666ff;
+        }
+
+        table#matrixTable {
+            border-collapse: collapse;
+            border: 3px solid #2a2a6a;
+            box-shadow: 0 0 24px rgba(80,80,200,0.4);
+        }
+
+        td {
+            width: 26px;
+            height: 26px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 14px;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Borde del tablero */
+        .x-borde {
+            background-color: #1a1a4a;
+        }
+
+        /* Celda vacía */
+        .x-vacio {
+            background-color: #050510;
+            border: 1px solid #0d0d25;
+        }
+
+        /* Bloque fijo */
+        .x-fijo {
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.5);
+        }
+
+        /* Pieza activa */
+        .x-pieza {
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 0 6px rgba(255,255,255,0.2);
+        }
+
+        /* Ghost piece (sombra de dónde va a caer) */
+        .x-ghost {
+            border: 2px solid;
+            background-color: transparent !important;
+            opacity: 0.45;
+        }
+
+        /* Animación cuando se elimina una línea */
+        @keyframes lineFlash {
+            0%   { background-color: white !important; }
+            40%  { background-color: #ffff88 !important; }
+            100% { background-color: #050510; opacity: 0; }
+        }
+        .x-clearing {
+            animation: lineFlash 280ms ease-out forwards;
+        }
+
+        /* ── Panel lateral ────────────────────────────────────── */
+        #side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-top: 46px;   /* alinear con el tablero */
+            min-width: 130px;
+        }
+
+        .panel-box {
+            background: #0d0d2a;
+            border: 1px solid #2a2a5a;
+            border-radius: 6px;
+            padding: 10px 12px;
+        }
+
+        .panel-label {
+            font-size: 0.45em;
+            color: #6666aa;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .panel-value {
+            font-size: 0.7em;
+            color: #aaaaff;
+        }
+
+        /* Mini preview siguiente pieza (4x4 grid) */
+        #next-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 16px);
+            grid-template-rows: repeat(4, 16px);
+            gap: 2px;
+            margin-top: 6px;
+        }
+        .next-cell {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+            background: #0a0a1e;
+            border: 1px solid #1a1a3a;
+        }
+        .next-cell.filled {
+            border-color: rgba(255,255,255,0.3);
+        }
+
+        /* Texto de status */
+        #points-text {
+            font-size: 0.5em;
+            color: #8888cc;
+            text-align: center;
+            letter-spacing: 1px;
+            display: none; /* ocultamos el texto crudo, usamos el panel */
+        }
+    </style>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+</head>
+<body>
+
+<div id="wrapper">
+
+    <!-- ── Tablero ──────────────────────────────────────────── -->
+    <div id="board-wrapper">
+        <div class="x-titulo">TETRIS</div>
+        <table id="matrixTable"></table>
+        <p id="points-text"></p>
+    </div>
+
+    <!-- ── Panel lateral ───────────────────────────────────── -->
+    <div id="side-panel">
+        <div class="panel-box">
+            <div class="panel-label">Puntos</div>
+            <div class="panel-value" id="hud-puntos">0</div>
+        </div>
+        <div class="panel-box">
+            <div class="panel-label">Nivel</div>
+            <div class="panel-value" id="hud-nivel">1</div>
+        </div>
+        <div class="panel-box">
+            <div class="panel-label">Líneas</div>
+            <div class="panel-value" id="hud-lineas">0</div>
+        </div>
+        <div class="panel-box">
+            <div class="panel-label">Siguiente</div>
+            <div id="next-grid"></div>
+        </div>
+        <div class="panel-box">
+            <div class="panel-label" style="margin-bottom:8px">Teclas</div>
+            <div class="panel-value" style="font-size:0.5em; line-height:2; color:#6666aa">
+                ← → mover<br>
+                ↑ rotar
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// COLORES Y FORMAS DE LAS PIEZAS
+// Espejo del Go — se usan solo en el cliente para mejorar visual
+// ═══════════════════════════════════════════════════════════════
+
+const PIECE_COLORS = [
+    '#00cfcf',  // I — cian
+    '#f0d000',  // O — amarillo
+    '#a000d0',  // T — violeta
+    '#00c000',  // S — verde
+    '#e00000',  // Z — rojo
+    '#f0a000',  // L — naranja
+    '#0000e0',  // J — azul oscuro
+];
+
+// Formas en rotación 0 — solo se usan para detectar el tipo de pieza
+// y para dibujar el preview de la siguiente pieza
+const FORMAS_ROT0 = [
+    [[0,0],[0,1],[0,2],[0,3]],          // I
+    [[0,0],[0,1],[1,0],[1,1]],          // O
+    [[0,1],[1,0],[1,1],[1,2]],          // T
+    [[0,1],[0,2],[1,0],[1,1]],          // S
+    [[0,0],[0,1],[1,1],[1,2]],          // Z
+    [[0,0],[1,0],[2,0],[2,1]],          // L
+    [[0,1],[1,1],[2,0],[2,1]],          // J
+];
+
+// Todas las rotaciones de cada pieza (para el ghost piece)
+const FORMAS = [
+    // I
+    [[[0,0],[0,1],[0,2],[0,3]],[[0,2],[1,2],[2,2],[3,2]],[[2,0],[2,1],[2,2],[2,3]],[[0,1],[1,1],[2,1],[3,1]]],
+    // O
+    [[[0,0],[0,1],[1,0],[1,1]],[[0,0],[0,1],[1,0],[1,1]],[[0,0],[0,1],[1,0],[1,1]],[[0,0],[0,1],[1,0],[1,1]]],
+    // T
+    [[[0,1],[1,0],[1,1],[1,2]],[[0,0],[1,0],[1,1],[2,0]],[[1,0],[1,1],[1,2],[2,1]],[[0,1],[1,0],[1,1],[2,1]]],
+    // S
+    [[[0,1],[0,2],[1,0],[1,1]],[[0,0],[1,0],[1,1],[2,1]],[[0,1],[0,2],[1,0],[1,1]],[[0,0],[1,0],[1,1],[2,1]]],
+    // Z
+    [[[0,0],[0,1],[1,1],[1,2]],[[0,1],[1,0],[1,1],[2,0]],[[0,0],[0,1],[1,1],[1,2]],[[0,1],[1,0],[1,1],[2,0]]],
+    // L
+    [[[0,0],[1,0],[2,0],[2,1]],[[0,0],[0,1],[0,2],[1,0]],[[0,0],[0,1],[1,1],[2,1]],[[0,2],[1,0],[1,1],[1,2]]],
+    // J
+    [[[0,1],[1,1],[2,0],[2,1]],[[0,0],[1,0],[1,1],[1,2]],[[0,0],[0,1],[1,0],[2,0]],[[0,0],[0,1],[0,2],[1,2]]],
+];
+
+const PIECE_NAMES = ['I','O','T','S','Z','L','J'];
+
+// ═══════════════════════════════════════════════════════════════
+// ESTADO DEL CLIENTE
+// ═══════════════════════════════════════════════════════════════
+
+let tableroAnterior = null;   // para detectar líneas eliminadas
+let colorTablero    = null;   // color de cada bloque fijo [fila][col]
+let tipoPiezaActual = -1;     // tipo de pieza detectado
+let rotacionActual  = 0;      // rotación detectada
+let bloquesPieza    = [];     // posiciones actuales de la pieza activa
+let tipoSiguiente   = -1;     // tipo de la siguiente pieza (del HUD)
+let clearingRows    = new Set(); // filas en animación de borrado
+
+// ═══════════════════════════════════════════════════════════════
+// DETECCIÓN DEL TIPO DE PIEZA
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * A partir de las posiciones absolutas de los 4 bloques "P" en el tablero,
+ * detecta qué tipo de pieza es y en qué rotación está.
+ * Funciona normalizando los bloques a offsets relativos al mínimo fila/col
+ * y comparándolos contra todas las formas conocidas.
+ */
+function detectarTipoPieza(bloques) {
+    if (bloques.length !== 4) return { tipo: -1, rot: 0 };
+
+    // Calcular mínimo fila y columna para normalizar
+    const minF = Math.min(...bloques.map(b => b[0]));
+    const minC = Math.min(...bloques.map(b => b[1]));
+
+    // Offsets normalizados, ordenados para comparación
+    const norm = bloques
+        .map(b => [b[0] - minF, b[1] - minC])
+        .sort((a, b) => a[0] !== b[0] ? a[0] - b[0] : a[1] - b[1]);
+
+    const normStr = JSON.stringify(norm);
+
+    for (let tipo = 0; tipo < FORMAS.length; tipo++) {
+        for (let rot = 0; rot < 4; rot++) {
+            const forma = FORMAS[tipo][rot];
+            const minFf = Math.min(...forma.map(f => f[0]));
+            const minCf = Math.min(...forma.map(f => f[1]));
+            const normForma = forma
+                .map(f => [f[0] - minFf, f[1] - minCf])
+                .sort((a, b) => a[0] !== b[0] ? a[0] - b[0] : a[1] - b[1]);
+            if (JSON.stringify(normForma) === normStr) {
+                return { tipo, rot };
+            }
+        }
+    }
+    return { tipo: -1, rot: 0 };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CÁLCULO DEL GHOST PIECE
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Dado el tablero y la posición de la pieza activa, simula el descenso
+ * fila por fila hasta que colisiona y retorna las posiciones finales (ghost).
+ */
+function calcularGhost(tablero, bloques) {
+    if (bloques.length === 0) return [];
+
+    const filas  = tablero.length;
+    const cols   = tablero[0].length;
+
+    // Conjunto de posiciones de la pieza activa para ignorarlas en colisión
+    const setPieza = new Set(bloques.map(b => `${b[0]},${b[1]}`));
+
+    let ghost = bloques.map(b => [...b]);
+
+    while (true) {
+        // Intentar bajar una fila
+        const siguiente = ghost.map(b => [b[0] + 1, b[1]]);
+
+        let colision = false;
+        for (const [f, c] of siguiente) {
+            if (f < 0 || f >= filas || c < 0 || c >= cols) { colision = true; break; }
+            const celda = tablero[f][c];
+            if ((celda === 'X' || celda === 'B') && !setPieza.has(`${f},${c}`)) {
+                colision = true;
+                break;
+            }
+        }
+
+        if (colision) break;
+        ghost = siguiente;
+    }
+
+    // Si el ghost está en la misma posición que la pieza activa, no mostrarlo
+    const ghostStr  = JSON.stringify(ghost.map(b => b.join()).sort());
+    const piezaStr  = JSON.stringify(bloques.map(b => b.join()).sort());
+    if (ghostStr === piezaStr) return [];
+
+    return ghost;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DETECCIÓN DE LÍNEAS ELIMINADAS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Compara el tablero anterior con el actual para detectar filas que
+ * estaban completamente llenas y ahora están vacías (fueron eliminadas).
+ * Retorna un Set con los índices de esas filas.
+ */
+function detectarLineasEliminadas(anterior, actual) {
+    const eliminadas = new Set();
+    if (!anterior) return eliminadas;
+
+    const filas = anterior.length;
+    const cols  = anterior[0].length;
+
+    for (let f = 1; f < filas - 1; f++) {
+        // Fila anterior completamente llena de 'B'
+        const estabaLlena = anterior[f].slice(1, cols - 1).every(c => c === 'B');
+        if (!estabaLlena) continue;
+
+        // En el tablero actual esa misma fila ya no está llena
+        const ahoraVacia = !actual[f].slice(1, cols - 1).every(c => c === 'B');
+        if (ahoraVacia) {
+            eliminadas.add(f);
+        }
+    }
+    return eliminadas;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PARSEO DEL HUD
+// ═══════════════════════════════════════════════════════════════
+
+function parsearHUD(texto) {
+    // Formato: "Puntos: 300  |  Nivel: 2  |  Líneas: 3  |  Siguiente: T"
+    const puntos  = (texto.match(/Puntos:\s*(\d+)/)  || [])[1] || '0';
+    const nivel   = (texto.match(/Nivel:\s*(\d+)/)   || [])[1] || '1';
+    const lineas  = (texto.match(/Líneas:\s*(\d+)/)  || [])[1] || '0';
+    const sigNom  = (texto.match(/Siguiente:\s*(\w)/) || [])[1] || '';
+
+    document.getElementById('hud-puntos').textContent = puntos;
+    document.getElementById('hud-nivel').textContent  = nivel;
+    document.getElementById('hud-lineas').textContent = lineas;
+
+    // Actualizar preview si cambió
+    const tipoNuevo = PIECE_NAMES.indexOf(sigNom);
+    if (tipoNuevo !== -1 && tipoNuevo !== tipoSiguiente) {
+        tipoSiguiente = tipoNuevo;
+        dibujarPreview(tipoNuevo);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PREVIEW DE SIGUIENTE PIEZA
+// ═══════════════════════════════════════════════════════════════
+
+function dibujarPreview(tipo) {
+    const grid = document.getElementById('next-grid');
+    grid.innerHTML = '';
+
+    const forma  = FORMAS_ROT0[tipo];
+    const color  = PIECE_COLORS[tipo];
+
+    // Grid 4×4
+    const celdas = Array.from({length: 4}, () => new Array(4).fill(false));
+
+    // Centrar la forma en el grid 4×4
+    const minF = Math.min(...forma.map(([f]) => f));
+    const minC = Math.min(...forma.map(([, c]) => c));
+    const maxF = Math.max(...forma.map(([f]) => f));
+    const maxC = Math.max(...forma.map(([, c]) => c));
+    const offF = Math.floor((3 - (maxF - minF)) / 2);
+    const offC = Math.floor((3 - (maxC - minC)) / 2);
+
+    for (const [f, c] of forma) {
+        const nf = f - minF + offF;
+        const nc = c - minC + offC;
+        if (nf >= 0 && nf < 4 && nc >= 0 && nc < 4) celdas[nf][nc] = true;
+    }
+
+    for (let f = 0; f < 4; f++) {
+        for (let c = 0; c < 4; c++) {
+            const div = document.createElement('div');
+            div.className = 'next-cell';
+            if (celdas[f][c]) {
+                div.classList.add('filled');
+                div.style.background = color;
+                div.style.borderColor = lighten(color, 40);
+                div.style.boxShadow   = `inset 0 0 3px rgba(255,255,255,0.3)`;
+            }
+            grid.appendChild(div);
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UTILIDADES DE COLOR
+// ═══════════════════════════════════════════════════════════════
+
+/** Aclara un color hexadecimal sumando 'amount' a cada canal RGB */
+function lighten(hex, amount) {
+    const r = Math.min(255, parseInt(hex.slice(1,3), 16) + amount);
+    const g = Math.min(255, parseInt(hex.slice(3,5), 16) + amount);
+    const b = Math.min(255, parseInt(hex.slice(5,7), 16) + amount);
+    return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+}
+
+/** Oscurece un color hexadecimal */
+function darken(hex, amount) {
+    const r = Math.max(0, parseInt(hex.slice(1,3), 16) - amount);
+    const g = Math.max(0, parseInt(hex.slice(3,5), 16) - amount);
+    const b = Math.max(0, parseInt(hex.slice(5,7), 16) - amount);
+    return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER DEL TABLERO
+// ═══════════════════════════════════════════════════════════════
+
+function renderTablero(tablero) {
+    const filas = tablero.length;
+    const cols  = tablero[0].length;
+
+    // ── 1. Detectar pieza activa (bloques "P") ────────────────
+    const nuevosBloques = [];
+    for (let f = 0; f < filas; f++) {
+        for (let c = 0; c < cols; c++) {
+            if (tablero[f][c] === 'P') nuevosBloques.push([f, c]);
+        }
+    }
+
+    // ── 2. Detectar tipo de pieza si cambió ───────────────────
+    if (nuevosBloques.length === 4) {
+        const { tipo, rot } = detectarTipoPieza(nuevosBloques);
+        if (tipo !== -1) {
+            tipoPiezaActual = tipo;
+            rotacionActual  = rot;
+        }
+    }
+    bloquesPieza = nuevosBloques;
+
+    // ── 3. Detectar líneas eliminadas ─────────────────────────
+    const lineasEliminadas = detectarLineasEliminadas(tableroAnterior, tablero);
+
+    // ── 4. Actualizar mapa de colores de bloques fijos ────────
+    if (!colorTablero || colorTablero.length !== filas) {
+        colorTablero = Array.from({length: filas}, () => new Array(cols).fill(-1));
+    }
+
+    // Cuando hay líneas eliminadas, desplazar el mapa de colores igual que el tablero
+    if (lineasEliminadas.size > 0) {
+        const filasEliminadasArr = [...lineasEliminadas].sort((a,b) => a - b);
+        for (const fe of filasEliminadasArr) {
+            // Bajar filas superiores en el mapa de colores
+            for (let f = fe; f >= 2; f--) {
+                for (let c = 0; c < cols; c++) {
+                    colorTablero[f][c] = colorTablero[f-1][c];
+                }
+            }
+            for (let c = 0; c < cols; c++) colorTablero[1][c] = -1;
+        }
+        clearingRows = lineasEliminadas;
+        // Limpiar el set después de la animación
+        setTimeout(() => { clearingRows = new Set(); }, 300);
+    }
+
+    // Asignar colores a nuevos bloques fijos
+    for (let f = 0; f < filas; f++) {
+        for (let c = 0; c < cols; c++) {
+            if (tablero[f][c] === 'B') {
+                // Si ya tiene color asignado, mantenerlo; si no, intentar inferir
+                if (colorTablero[f][c] === -1) {
+                    // Heredar color del vecino más cercano que tenga color asignado
+                    // (la pieza acaba de fijarse: usar el color de la pieza activa)
+                    colorTablero[f][c] = tipoPiezaActual >= 0 ? tipoPiezaActual : 0;
+                }
+            } else if (tablero[f][c] !== 'B') {
+                // Si la celda ya no es bloque fijo, limpiar el color
+                if (tablero[f][c] === '' || tablero[f][c] === 'P') {
+                    // Solo limpiar si realmente está vacía
+                    if (tablero[f][c] === '') colorTablero[f][c] = -1;
+                }
+            }
+        }
+    }
+
+    // ── 5. Calcular ghost piece ───────────────────────────────
+    const ghostBloques = tipoPiezaActual >= 0
+        ? calcularGhost(tablero, bloquesPieza)
+        : [];
+    const ghostSet = new Set(ghostBloques.map(([f,c]) => `${f},${c}`));
+    const piezaSet = new Set(bloquesPieza.map(([f,c]) => `${f},${c}`));
+
+    // ── 6. Construir el DOM del tablero ───────────────────────
+    const table = document.getElementById('matrixTable');
+    table.innerHTML = '';
+
+    const color = tipoPiezaActual >= 0 ? PIECE_COLORS[tipoPiezaActual] : '#aaaaff';
+
+    for (let f = 0; f < filas; f++) {
+        const tr = document.createElement('tr');
+
+        for (let c = 0; c < cols; c++) {
+            const td   = document.createElement('td');
+            const val  = tablero[f][c];
+            const key  = `${f},${c}`;
+
+            if (val === 'X') {
+                // ── Borde ─────────────────────────────────────
+                td.className = 'x-borde';
+
+            } else if (clearingRows.has(f) && val === '') {
+                // ── Animación de línea eliminada ──────────────
+                td.className = 'x-clearing';
+
+            } else if (val === 'B') {
+                // ── Bloque fijo (con color del tipo de pieza) ─
+                td.className = 'x-fijo';
+                const tipo  = colorTablero[f][c];
+                const col   = tipo >= 0 ? PIECE_COLORS[tipo] : '#5555aa';
+                td.style.backgroundColor = col;
+                td.style.borderColor     = lighten(col, 35);
+
+            } else if (piezaSet.has(key)) {
+                // ── Pieza activa ──────────────────────────────
+                td.className = 'x-pieza';
+                td.style.backgroundColor = color;
+                td.style.borderColor     = lighten(color, 50);
+                td.style.boxShadow       = `0 0 8px ${color}88`;
+
+            } else if (ghostSet.has(key)) {
+                // ── Ghost piece ───────────────────────────────
+                td.className = 'x-ghost';
+                td.style.borderColor = color;
+                td.style.backgroundColor = color + '22';
+
+            } else {
+                // ── Celda vacía ───────────────────────────────
+                td.className = 'x-vacio';
+            }
+
+            tr.appendChild(td);
+        }
+        table.appendChild(tr);
+    }
+
+    // Guardar tablero para la próxima comparación
+    tableroAnterior = tablero.map(row => [...row]);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CONEXIÓN SSE
+// ═══════════════════════════════════════════════════════════════
+
+const eventSource = new EventSource('/updates');
+
+eventSource.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+
+    if (data.game_over) {
+        location.replace('http://localhost:8080/gameover?points=' + data.points);
+        return;
+    }
+    if (data.win) {
+        location.replace('http://localhost:8080/win?points=' + data.points);
+        return;
+    }
+    if (data.is_text) {
+        parsearHUD(data.text);
+        return;
+    }
+
+    // Es el tablero: renderizar con todas las mejoras
+    renderTablero(data);
+};
+
+// ═══════════════════════════════════════════════════════════════
+// TECLADO
+// ═══════════════════════════════════════════════════════════════
+
+document.addEventListener('keydown', function(event) {
+    if (!['ArrowUp','ArrowLeft','ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    fetch('/keypress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: event.key })
+    });
+});
+</script>
+</body>
+</html>
