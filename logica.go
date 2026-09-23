@@ -404,8 +404,8 @@ func fijarPieza(
 ) {
 	for i := 1; i < constCantFilasTablero-1; i++ {
 		for j := 1; j < constCantColumnasTablero-1; j++ {
-			if tablero[i][j] == "P" {
-				tablero[i][j] = ""
+			if tablero[i][j] == constSimboloPieza {
+				tablero[i][j] = constSimboloVacio
 			}
 		}
 	}
@@ -414,7 +414,7 @@ func fijarPieza(
 		r := piezaActiva[i][0]
 		c := piezaActiva[i][1]
 
-		tablero[r][c] = "B"
+		tablero[r][c] = constSimboloBloqueFijo
 	}
 }
 
