@@ -371,7 +371,7 @@ func calcularNuevaPosicionPieza(
 
 // rotarPieza intenta rotar la pieza activa 90° en sentido horario.
 // Recuperar el origen restando al bloque [1] sus coordenadas en la forma actual.
-// Sumara ese origen las coordenadas de la nueva forma; el bloque [1] no es el origen.
+// Sumar a ese origen las coordenadas de la nueva forma; el bloque [1] no es el origen.
 // Si la propuesta colisiona, conservar la pieza y su estado de rotación.
 //
 // Parámetros:
