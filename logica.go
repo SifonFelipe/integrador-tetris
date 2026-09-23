@@ -371,7 +371,7 @@ func calcularNuevaPosicionPieza(
 
 // rotarPieza intenta rotar la pieza activa 90° en sentido horario.
 // Recuperar el origen restando al bloque [1] sus coordenadas en la forma actual.
-// Sumar a ese origen las coordenadas de la nueva forma; el bloque [1] no es el origen.
+// Sumara ese origen las coordenadas de la nueva forma; el bloque [1] no es el origen.
 // Si la propuesta colisiona, conservar la pieza y su estado de rotación.
 //
 // Parámetros:
@@ -402,7 +402,20 @@ func fijarPieza(
 	tablero *[constCantFilasTablero][constCantColumnasTablero]string,
 	piezaActiva [4][constCantColumnasPieza]int,
 ) {
-	// PROGRAMAR
+	for i := 1; i < constCantFilasTablero-1; i++ {
+		for j := 1; j < constCantColumnasTablero-1; j++ {
+			if tablero[i][j] == "P" {
+				tablero[i][j] = ""
+			}
+		}
+	}
+
+	for i := range piezaActiva {
+		r := piezaActiva[i][0]
+		c := piezaActiva[i][1]
+
+		tablero[r][c] = "B"
+	}
 }
 
 // filaCompleta indica si todas las celdas interiores de una fila contienen B.
