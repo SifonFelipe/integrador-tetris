@@ -319,7 +319,29 @@ func actualizarTablero(
 	tablero *[constCantFilasTablero][constCantColumnasTablero]string,
 	piezaActiva [4][constCantColumnasPieza]int,
 ) {
-	// PROGRAMAR
+	var x, y int
+
+	for i := range constCantFilasTablero {
+		for j := range constCantColumnasTablero {
+			if tablero[i][j] == constSimboloPieza {
+				tablero[i][j] = constSimboloVacio
+			}
+		}
+	}
+
+	for i := range 4 {
+		for j := range constCantColumnasPieza {
+			if j == 0 {
+				x = piezaActiva[i][j]
+			} else {
+				y = piezaActiva[i][j]
+			}
+		}
+
+		if tablero[x][y] == constSimboloVacio {
+			tablero[x][y] = constSimboloPieza
+		}
+	}
 }
 
 // FUNCIÓN PROVISTA: usarla para comprobar movimientos, giros y aparición.
