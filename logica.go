@@ -169,7 +169,21 @@ func generarEventos() {
 func generarTablero() [constCantFilasTablero][constCantColumnasTablero]string {
 	var tablero [constCantFilasTablero][constCantColumnasTablero]string
 
-	// PROGRAMAR
+	for fila := 0; fila < constCantFilasTablero; fila++ {
+		for columna := 0; columna < constCantColumnasTablero; columna++ {
+
+			if fila == 0 ||
+				fila == constCantFilasTablero-1 ||
+				columna == 0 ||
+				columna == constCantColumnasTablero-1 {
+
+				tablero[fila][columna] = constSimboloBorde
+
+			} else {
+				tablero[fila][columna] = constSimboloVacio
+			}
+		}
+	}
 
 	return tablero
 }
@@ -301,10 +315,18 @@ func obtenerFormaRotacion(tipoPieza int, rotacion int) [4][constCantColumnasPiez
 //   - Entero con el tipo de pieza generada (0 a 6).
 func generarNuevaPieza(cantColumnasTablero int) ([4][constCantColumnasPieza]int, int) {
 	var pieza [4][constCantColumnasPieza]int
+	nPieza := rand.Intn(7)
 
-	// PROGRAMAR
+	forma := obtenerFormaRotacion(nPieza, 0)
 
-	return pieza, 0
+	columnaInicial := cantColumnasTablero / 2
+
+	for idx, posicion := range forma {
+		posicion[1] += columnaInicial
+		pieza[idx] = posicion
+	}
+
+	return pieza, nPieza
 }
 
 // actualizarTablero limpia los símbolos de la pieza activa anterior del tablero
@@ -408,8 +430,17 @@ func fijarPieza(
 // filaCompleta indica si todas las celdas interiores de una fila contienen B.
 // La fila recibida está entre 1 y constCantFilasTablero-2; no revisar paredes.
 func filaCompleta(tablero [constCantFilasTablero][constCantColumnasTablero]string, fila int) bool {
-	// PROGRAMAR
-	return false
+	// [X, B, B, , B, X]
+	fila2 := tablero[fila]
+	requiredB := constCantColumnasTablero - 2
+	contador := 0
+	for columna := 0; columna < constCantColumnasTablero; columna++ {
+		if fila2[columna] == constSimboloBloqueFijo {
+			contador++
+		}
+
+	}
+	return requiredB == contador
 }
 
 // eliminarFila copia las filas superiores una posición hacia abajo y vacía la fila 1.
