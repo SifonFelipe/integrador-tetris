@@ -341,7 +341,29 @@ func actualizarTablero(
 	tablero *[constCantFilasTablero][constCantColumnasTablero]string,
 	piezaActiva [4][constCantColumnasPieza]int,
 ) {
-	// PROGRAMAR
+	var x, y int
+
+	for i := range constCantFilasTablero {
+		for j := range constCantColumnasTablero {
+			if tablero[i][j] == constSimboloPieza {
+				tablero[i][j] = constSimboloVacio
+			}
+		}
+	}
+
+	for i := range 4 {
+		for j := range constCantColumnasPieza {
+			if j == 0 {
+				x = piezaActiva[i][j]
+			} else {
+				y = piezaActiva[i][j]
+			}
+		}
+
+		if tablero[x][y] == constSimboloVacio {
+			tablero[x][y] = constSimboloPieza
+		}
+	}
 }
 
 // FUNCIÓN PROVISTA: usarla para comprobar movimientos, giros y aparición.
@@ -424,7 +446,20 @@ func fijarPieza(
 	tablero *[constCantFilasTablero][constCantColumnasTablero]string,
 	piezaActiva [4][constCantColumnasPieza]int,
 ) {
-	// PROGRAMAR
+	for i := 1; i < constCantFilasTablero-1; i++ {
+		for j := 1; j < constCantColumnasTablero-1; j++ {
+			if tablero[i][j] == constSimboloPieza {
+				tablero[i][j] = constSimboloVacio
+			}
+		}
+	}
+
+	for i := range piezaActiva {
+		r := piezaActiva[i][0]
+		c := piezaActiva[i][1]
+
+		tablero[r][c] = constSimboloBloqueFijo
+	}
 }
 
 // filaCompleta indica si todas las celdas interiores de una fila contienen B.
