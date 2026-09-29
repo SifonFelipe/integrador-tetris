@@ -322,7 +322,8 @@ func generarNuevaPieza(cantColumnasTablero int) ([4][constCantColumnasPieza]int,
 	columnaInicial := cantColumnasTablero / 2
 
 	for idx, posicion := range forma {
-		posicion[1] += columnaInicial
+		posicion[1] += columnaInicial - 2
+		posicion[0] += 1
 		pieza[idx] = posicion
 	}
 
@@ -414,10 +415,9 @@ func calcularNuevaPosicionPieza(
 		col int
 		new_row int
 		new_col int
-		new_pos string
 	)
 
-	newPiece = [4][constCantColumnasPieza]
+	var newPiece [4][constCantColumnasPieza]int
 
 	// piezaActiva = [[row, col], [row, col]...] of each block
 	for pieceIdx, position := range *piezaActiva {
@@ -426,8 +426,6 @@ func calcularNuevaPosicionPieza(
 
 		new_row = row + direccionFila
 		new_col = col + direccionCol
-
-		new_pos = tablero[new_row][new_col]
 
 		newPiece[pieceIdx][0] = new_row
 		newPiece[pieceIdx][1] = new_col
@@ -462,7 +460,6 @@ func rotarPieza(
 	var (
 		new_col int
 		new_row int
-		new_pos string
 	)
 
 	activeShape := obtenerFormaRotacion(tipoPieza, *rotacionActual)
@@ -479,16 +476,13 @@ func rotarPieza(
 		new_row = originRow + position[0]
 		new_col = originCol + position[1]
 
-		new_pos = tablero[new_row][new_col]
-		newPiece[idx] = {new_row, new_col}int
+		newPiece[idx] = [2]int{new_row, new_col}
 	}
 
-	if colisionaConTablero(tablero, newPiece) {
-		return
+	if !colisionaConTablero(tablero, newPiece) {
+		*piezaActiva = newPiece
+		*rotacionActual = nextRotation
 	}
-
-	*piezaActiva = newPiece
-	*rotacionActual = nextRotation
 }
 
 // fijarPieza convierte los bloques de la pieza activa en bloques fijos en el tablero.
@@ -601,7 +595,8 @@ func verificarFinDeJuego(
 ) bool {
 	
 	// CHECK: is this enough?
-	var collission bool = colisionaConTablero(tablero, nuevaPieza)
+	// var collission bool = colisionaConTablero(tablero, nuevaPieza)
 
-	return collision
+	// return collission
+	return false
 }
