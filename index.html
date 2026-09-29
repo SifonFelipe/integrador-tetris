@@ -619,7 +619,7 @@ eventSource.onmessage = function(event) {
 // ═══════════════════════════════════════════════════════════════
 
 document.addEventListener('keydown', function(event) {
-    if (!['ArrowUp','ArrowLeft','ArrowRight'].includes(event.key)) return;
+    if (!['ArrowUp','ArrowLeft','ArrowRight','ArrowDown'].includes(event.key)) return;
     event.preventDefault();
     fetch('/keypress', {
         method: 'POST',

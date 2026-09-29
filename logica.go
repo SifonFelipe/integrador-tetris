@@ -44,6 +44,7 @@ const (
 	// Intervalo fijo de caída (ms); el nivel es informativo
 	constIntervaloDescenso = 800
 	constLineasPorNivel    = 10
+	constDescensoRapido    = 50
 )
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -53,7 +54,10 @@ const (
 var (
 	direccionCol   int  // -1 = izquierda, 0 = quieto, 1 = derecha
 	rotarPiezaFlag bool // true cuando el usuario presiona ↑
+	acelerarCaidaFlag bool // true cuando el usuario presion KeyDown
 )
+
+var descenso int  // value for descenso
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOOP PRINCIPAL DEL JUEGO
@@ -79,10 +83,12 @@ func generarEventos() {
 	puntos = 0
 	lineasEliminadas = 0
 	rotacionActual = 0
+	descenso = constIntervaloDescenso
 
 	// Inicializar variables de control de teclado
 	direccionCol = 0
 	rotarPiezaFlag = false
+	acelerarCaidaFlag = false
 
 	// Generar tablero con bordes
 	tablero = generarTablero()
@@ -123,8 +129,15 @@ func generarEventos() {
 			rotarPiezaFlag = false
 		}
 
+		if acelerarCaidaFlag {
+			descenso = constDescensoRapido
+			acelerarCaidaFlag = false
+		} else {
+			descenso = constIntervaloDescenso
+		}
+
 		// ── Descenso automático con intervalo fijo ─────────────────────
-		if time.Since(ultimoDescenso) >= time.Duration(constIntervaloDescenso)*time.Millisecond {
+		if time.Since(ultimoDescenso) >= time.Duration(descenso)*time.Millisecond {
 			ultimoDescenso = time.Now()
 
 			if !calcularNuevaPosicionPieza(tablero, &piezaActiva, 1, 0) {
@@ -595,8 +608,8 @@ func verificarFinDeJuego(
 ) bool {
 	
 	// CHECK: is this enough?
-	// var collission bool = colisionaConTablero(tablero, nuevaPieza)
+	var collission bool = colisionaConTablero(tablero, nuevaPieza)
 
-	// return collission
-	return false
+	return collission
+	// return false
 }

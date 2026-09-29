@@ -115,6 +115,8 @@ func keyPressHandler(w http.ResponseWriter, r *http.Request) {
 		direccionCol = 1 // mover pieza a la derecha
 	case "ArrowUp":
 		rotarPiezaFlag = true // rotar pieza
+	case "ArrowDown":
+		acelerarCaidaFlag = true // acelerar caída de la pieza
 	}
 
 	w.WriteHeader(http.StatusOK)
