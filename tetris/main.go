@@ -71,13 +71,13 @@ func gameoverHandler(w http.ResponseWriter, r *http.Request) {
 	type PageData struct {
 		Points string
 		PlayerID string
-		multiplayerServer string
+		MultiplayerServer string
 	}
 
 	data := PageData{
 		Points: r.URL.Query().Get("points"),
 		PlayerID: r.URL.Query().Get("player_id"),
-		multiplayerServer: multiplayerServer,
+		MultiplayerServer: multiplayerServer,
 	}
 
 	tmpl, err := template.ParseFiles("gameover.html")
@@ -85,6 +85,7 @@ func gameoverHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	err = tmpl.Execute(w, data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
