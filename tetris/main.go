@@ -36,7 +36,9 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
+	
+		// INFO: passing the multiplayer server URL to the template
+		// to fetch from it
 		data := IndexData{MultiplayerServer: multiplayerServer}
 
 		tmpl.Execute(w, data)
@@ -69,11 +71,13 @@ func gameoverHandler(w http.ResponseWriter, r *http.Request) {
 	type PageData struct {
 		Points string
 		PlayerID string
+		multiplayerServer string
 	}
 
 	data := PageData{
 		Points: r.URL.Query().Get("points"),
 		PlayerID: r.URL.Query().Get("player_id"),
+		multiplayerServer: multiplayerServer,
 	}
 
 	tmpl, err := template.ParseFiles("gameover.html")

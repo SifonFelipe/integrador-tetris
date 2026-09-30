@@ -33,8 +33,7 @@
 <p id="status">Esperando al otro jugador...</p>
 
 <script>
-    // DEV: hardcoded server URL for dev
-    const MULTIPLAYER_SERVER = 'http://localhost:9000';
+    const MULTIPLAYER_SERVER = "{{.multiplayerServer}}";
 
     const gameOverText = document.getElementById("game-over");
     const text = gameOverText.innerText;
