@@ -118,16 +118,21 @@ func generarEventos() {
 	// ── Loop principal ────────────────────────────────────────────────────────
 	for {
 		// ── Procesar entrada del usuario ──────────────────────────────────────
+		estadoCambio := false
 
 		// Movimiento lateral
 		if direccionCol != 0 {
 			calcularNuevaPosicionPieza(tablero, &piezaActiva, 0, direccionCol)
 			direccionCol = 0
+
+			estadoCambio = true
 		}
 
 		// Rotación
 		if rotarPiezaFlag {
 			rotarPieza(tablero, &piezaActiva, tipoPiezaActiva, &rotacionActual)
+
+			estadoCambio = true
 			rotarPiezaFlag = false
 		}
 
@@ -141,6 +146,7 @@ func generarEventos() {
 		// ── Descenso automático con intervalo fijo ─────────────────────
 		if time.Since(ultimoDescenso) >= time.Duration(descenso)*time.Millisecond {
 			ultimoDescenso = time.Now()
+			estadoCambio = true
 
 			if !calcularNuevaPosicionPieza(tablero, &piezaActiva, 1, 0) {
 				// La pieza tocó el fondo o una pieza fija → fijar
@@ -161,17 +167,19 @@ func generarEventos() {
 		}
 
 		// ── Actualizar tablero y enviar al cliente ────────────────────────────
-		actualizarTablero(&tablero, piezaActiva)
-		enviarActualizacionTablero(tablero)
-		enviarActualizacionTexto(fmt.Sprint(
-			"Puntos: ", puntos,
-			" | Nivel: ", nivel,
-			" | Líneas: ", lineasEliminadas,
-			" | Siguiente: ", nombrePieza(tipoSiguientePieza),
-		))
+		if estadoCambio {
+			actualizarTablero(&tablero, piezaActiva)
+			enviarActualizacionTablero(tablero)
+			enviarActualizacionTexto(fmt.Sprint(
+				"Puntos: ", puntos,
+				" | Nivel: ", nivel,
+				" | Líneas: ", lineasEliminadas,
+				" | Siguiente: ", nombrePieza(tipoSiguientePieza),
+			))
+		}
 
 		// Esperar un ciclo antes del próximo frame (50ms ≈ 20 FPS)
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 

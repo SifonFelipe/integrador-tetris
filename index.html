@@ -453,6 +453,33 @@ function darken(hex, amount) {
     return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
 }
 
+
+let celdasDOM = null;
+
+function crearTableroDOM(filas, cols) {
+    const table = document.getElementById('matrixTable');
+    table.innerHTML = '';
+
+    celdasDOM = Array.from(
+        {length: filas},
+        () => new Array(cols)
+    );
+
+    for (let f = 0; f < filas; f++) {
+        const tr = document.createElement('tr');
+        
+        for (let c = 0; c < cols; c++) {
+            const td = document.createElement('td');
+          
+            celdasDOM[f][c] = td;
+            tr.appendChild(td);
+        }
+
+        table.appendChild(tr);
+    }   
+}
+
+
 // ═══════════════════════════════════════════════════════════════
 // RENDER DEL TABLERO
 // ═══════════════════════════════════════════════════════════════
@@ -532,56 +559,57 @@ function renderTablero(tablero) {
     const piezaSet = new Set(bloquesPieza.map(([f,c]) => `${f},${c}`));
 
     // ── 6. Construir el DOM del tablero ───────────────────────
-    const table = document.getElementById('matrixTable');
-    table.innerHTML = '';
+    if (!celdasDOM) {
+        crearTableroDOM(filas, cols);
+    }
 
     const color = tipoPiezaActual >= 0 ? PIECE_COLORS[tipoPiezaActual] : '#aaaaff';
 
     for (let f = 0; f < filas; f++) {
-        const tr = document.createElement('tr');
-
         for (let c = 0; c < cols; c++) {
-            const td   = document.createElement('td');
-            const val  = tablero[f][c];
-            const key  = `${f},${c}`;
+
+            const td = celdasDOM[f][c];
+            const val = tablero[f][c];
+            const key = `${f},${c}`;
+
+            // Limpiar estado visual anterior
+            td.className = '';
+            td.style.backgroundColor = '';
+            td.style.borderColor = '';
+            td.style.boxShadow = '';
 
             if (val === 'X') {
-                // ── Borde ─────────────────────────────────────
                 td.className = 'x-borde';
 
             } else if (clearingRows.has(f) && val === '') {
-                // ── Animación de línea eliminada ──────────────
                 td.className = 'x-clearing';
 
             } else if (val === 'B') {
-                // ── Bloque fijo (con color del tipo de pieza) ─
                 td.className = 'x-fijo';
-                const tipo  = colorTablero[f][c];
-                const col   = tipo >= 0 ? PIECE_COLORS[tipo] : '#5555aa';
+
+                const tipo = colorTablero[f][c];
+                const col = tipo >= 0 ? PIECE_COLORS[tipo] : '#5555aa';
+
                 td.style.backgroundColor = col;
-                td.style.borderColor     = lighten(col, 35);
+                td.style.borderColor = lighten(col, 35);
 
             } else if (piezaSet.has(key)) {
-                // ── Pieza activa ──────────────────────────────
                 td.className = 'x-pieza';
+
                 td.style.backgroundColor = color;
-                td.style.borderColor     = lighten(color, 50);
-                td.style.boxShadow       = `0 0 8px ${color}88`;
+                td.style.borderColor = lighten(color, 50);
+                td.style.boxShadow = `0 0 8px ${color}88`;
 
             } else if (ghostSet.has(key)) {
-                // ── Ghost piece ───────────────────────────────
                 td.className = 'x-ghost';
+
                 td.style.borderColor = color;
                 td.style.backgroundColor = color + '22';
 
             } else {
-                // ── Celda vacía ───────────────────────────────
                 td.className = 'x-vacio';
             }
-
-            tr.appendChild(td);
         }
-        table.appendChild(tr);
     }
 
     // Guardar tablero para la próxima comparación
