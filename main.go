@@ -10,6 +10,13 @@ import (
 // Canal para enviar actualizaciones al cliente vía SSE
 var updates = make(chan string)
 
+const (
+	constMatchWaiting = "waiting"
+	constMatchPlaying = "playing"
+	constMatchFinished = "finished"
+	constMatchDraw = "draw"
+)
+
 type Player struct {
 	ID string `json:"id"`
 	Name string `json:"name"`
@@ -74,21 +81,22 @@ func main() {
 // -- utils para match --
 func getMatchResult() string {
 	if currentMatch.Player1 == nil || currentMatch.Player2 == nil {
-		return "Esperando jugadores..."
+		return constMatchWaiting
 	}
 
 	if !currentMatch.Player1.GameOver || !currentMatch.Player2.GameOver {
-		return "Jugando"
+		return constMatchPlaying
+	}
 
 	if currentMatch.Player1.Points > currentMatch.Player2.Points {
-		return currentMatch.Player1.Name
+		return currentMatch.Player1.ID
 	}
 
 	if currentMatch.Player2.Points > currentMatch.Player1.Points {
-		return currentMatch.Player2.Name
+		return currentMatch.Player2.ID
 	}
 
-	return "Empate"
+	return constMatchDraw
 }
 
 
@@ -118,11 +126,11 @@ func joinHandler(w http.ResponseWriter, r *http.Request) {
 
 	// ask for a empty slot in the current match
 	if currentMatch.Player1 == nil {
-		player = Player{ID: "1", Name: data.Name}
+		player = Player{ID: "1", Name: data.Name + " (Jugador 1)"}
 		currentMatch.Player1 = &player
 
 	} else if currentMatch.Player2 == nil {
-		player = Player{ID: "2", Name: data.Name}
+		player = Player{ID: "2", Name: data.Name + " (Jugador 2)"}
 		currentMatch.Player2 = &player
 
 	} else {
@@ -185,12 +193,12 @@ func matchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := getMatchResult()
-	status := "Jugando"
+	status := constMatchPlaying
 
-	if result == "Esperando jugadores..." {
-		status = "Esperando jugadores..."
-	} else if result != "Jugando" {
-		status = "Finalizado"
+	if result == constMatchWaiting {
+		status = constMatchWaiting
+	} else if result != constMatchPlaying {
+		status = constMatchFinished
 	}
 
 	response := MatchResponse{
@@ -248,10 +256,14 @@ func multiplayerGameOverHandler(w http.ResponseWriter, r *http.Request) {
 func gameoverHandler(w http.ResponseWriter, r *http.Request) {
 	type PageData struct {
 		Points string
+		PlayerID string
 	}
+
 	data := PageData{
 		Points: r.URL.Query().Get("points"),
+		PlayerID: r.URL.Query().Get("player_id"),
 	}
+
 	tmpl, err := template.ParseFiles("gameover.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

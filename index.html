@@ -663,7 +663,11 @@ eventSource.onmessage = async function(event) {  // NOTE: async because sendGame
 
         // TODO: keep watching the other player gameplay?
 
-        location.replace('/gameover?points=' + data.points);
+        location.replace(
+          '/gameover?points=' + data.points
+          + "&player_id=" + playerId
+        );
+
         return;
     }
     if (data.win) {

@@ -29,9 +29,18 @@
 <body>
 <div id="game-over">GAME&nbsp;OVER<br><br>PUNTOS&nbsp;{{.Points}}</div>
 
+<p id="result-title"></p>
+<p id="status">Esperando al otro jugador...</p>
+
 <script>
     const gameOverText = document.getElementById("game-over");
     const text = gameOverText.innerText;
+    const playerId = "{{.PlayerID}}";
+
+    const draw = "¡EMPATE!";
+    const win = "¡GANASTE!";
+    const lose = "¡PERDISTE!";
+
     gameOverText.innerText = "";
 
     function showLetters() {
@@ -42,10 +51,46 @@
         }
     }
 
+    async function checkMatch() {
+        const response = await fetch('/match');
+
+        if (!response.ok) {
+            console.error('Error obteniendo el estado del juego:', response.statusText);
+            return;
+        }
+
+        const match = await response.json();
+
+      if (match.status !== 'finished') {
+          return;
+      }
+
+      showResult(match);
+    }
+
+
+    function showResult(match) {
+        const title = document.getElementById("result-title");
+        const status = document.getElementById("status");
+
+        if (match.result === 'draw') {
+            title.textContent = draw;
+        } else if (match.result === playerId) {
+            title.textContent = win;
+        } else {
+            title.textContent = lose;
+        }
+
+        status.textContent = `${match.player1.name}: ${match.player1.points} - ${match.player2.name}: ${match.player2.points}`;
+    }
+
     setTimeout(() => {
         gameOverText.style.opacity = 1;
         showLetters();
     }, 500); // Espera 2 segundos antes de mostrar las letras
+
+    setInterval(checkMatch, 1000); // Verifica el estado del juego cada segundo
+    checkMatch();
 </script>
 </body>
 </html>
