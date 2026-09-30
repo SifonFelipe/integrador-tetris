@@ -161,6 +161,8 @@ func generarEventos() {
 		}
 
 		// ── Actualizar tablero y enviar al cliente ────────────────────────────
+
+		// CHECK: this is not updating instantly.
 		actualizarTablero(&tablero, piezaActiva)
 		enviarActualizacionTablero(tablero)
 		enviarActualizacionTexto(fmt.Sprint(
@@ -547,16 +549,14 @@ func fijarPieza(
 // La fila recibida está entre 1 y constCantFilasTablero-2; no revisar paredes.
 func filaCompleta(tablero [constCantFilasTablero][constCantColumnasTablero]string, fila int) bool {
 	// [X, B, B, , B, X]
-	fila2 := tablero[fila]
-	requiredB := constCantColumnasTablero - 2
-	contador := 0
-	for columna := 0; columna < constCantColumnasTablero; columna++ {
-		if fila2[columna] == constSimboloBloqueFijo {
-			contador++
+	for columna := 1; columna < constCantColumnasTablero-1; columna++ {
+		if tablero[fila][columna] != constSimboloBloqueFijo {
+			return false
 		}
 
 	}
-	return requiredB == contador
+
+	return true
 }
 
 // eliminarFila copia las filas superiores una posición hacia abajo y vacía la fila 1.
@@ -569,7 +569,7 @@ func eliminarFila(tablero *[constCantFilasTablero][constCantColumnasTablero]stri
 	}
 
 	for i := 1; i < constCantColumnasTablero-1; i++ {
-		tablero[1][i] = ""
+		tablero[1][i] = constSimboloVacio
 	}
 }
 
@@ -607,6 +607,8 @@ func verificarLineasCompletas(
 	case 4:
 		*puntos += constPuntos4Lineas
 	}
+
+	fmt.Println("Líneas eliminadas:", eliminadas, " | Total:", *lineasEliminadas+eliminadas, " | Puntos:", *puntos)
 
 	// Actualizar contadores globales
 	*lineasEliminadas += eliminadas
