@@ -55,9 +55,10 @@ var (
 	direccionCol   int  // -1 = izquierda, 0 = quieto, 1 = derecha
 	rotarPiezaFlag bool // true cuando el usuario presiona ↑
 	acelerarCaidaFlag bool // true cuando el usuario presion KeyDown
+	descenso int  // valor de descenso (ms)
+	siguientePieza [4][constCantColumnasPieza]int // posición de la siguiente pieza (para mostrarla en el cliente)
+	tipoSiguientePieza int  // tipo de la siguiente pieza (0 a 6)
 )
-
-var descenso int  // value for descenso
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOOP PRINCIPAL DEL JUEGO
@@ -95,6 +96,7 @@ func generarEventos() {
 
 	// Generar primera pieza
 	piezaActiva, tipoPiezaActiva = generarNuevaPieza(constCantColumnasTablero)
+	siguientePieza, tipoSiguientePieza = generarNuevaPieza(constCantColumnasTablero)
 
 	// Comprobar la aparición antes de dibujar.
 	if verificarFinDeJuego(tablero, piezaActiva) {
@@ -146,7 +148,8 @@ func generarEventos() {
 				verificarLineasCompletas(&tablero, &puntos, &lineasEliminadas, &nivel)
 
 				// Generar nueva pieza
-				piezaActiva, tipoPiezaActiva = generarNuevaPieza(constCantColumnasTablero)
+				piezaActiva, tipoPiezaActiva = siguientePieza, tipoSiguientePieza
+				siguientePieza, tipoSiguientePieza = generarNuevaPieza(constCantColumnasTablero)
 				rotacionActual = 0
 				// La pieza nueva no debe sobrescribir bloques ya fijados.
 				if verificarFinDeJuego(tablero, piezaActiva) {
@@ -164,11 +167,23 @@ func generarEventos() {
 			"Puntos: ", puntos,
 			" | Nivel: ", nivel,
 			" | Líneas: ", lineasEliminadas,
+			" | Siguiente: ", nombrePieza(tipoSiguientePieza),
 		))
 
 		// Esperar un ciclo antes del próximo frame (50ms ≈ 20 FPS)
 		time.Sleep(50 * time.Millisecond)
 	}
+}
+
+func nombrePieza(tipo int) string {
+	/* function to get the name of the piece, used to display it on the front */
+	nombres := []string{"I", "O", "T", "S", "Z", "L", "J"}
+
+	if tipo < 0 || tipo >= len(nombres) {
+		return ""
+	}
+
+	return nombres[tipo]
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -335,7 +350,7 @@ func generarNuevaPieza(cantColumnasTablero int) ([4][constCantColumnasPieza]int,
 	columnaInicial := cantColumnasTablero / 2
 
 	for idx, posicion := range forma {
-		posicion[1] += columnaInicial - 2
+		posicion[1] += columnaInicial - 2  // -2 for centering the piece
 		posicion[0] += 1
 		pieza[idx] = posicion
 	}
@@ -470,6 +485,7 @@ func rotarPieza(
 	tipoPieza int,
 	rotacionActual *int,
 ) {
+	// TODO: wallkick mentioned in the instructions, but not implemented here.
 	var (
 		new_col int
 		new_row int
