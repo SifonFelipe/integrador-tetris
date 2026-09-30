@@ -252,6 +252,68 @@ let bloquesPieza    = [];     // posiciones actuales de la pieza activa
 let tipoSiguiente   = -1;     // tipo de la siguiente pieza (del HUD)
 let clearingRows    = new Set(); // filas en animación de borrado
 
+// Online functions
+const MULTIPLAYER_SERVER = "{{.MultiplayerServer}}";
+
+let playerId = null;
+let lastScoreSent = null;
+
+
+async function joinGame() {
+
+    // sends a HTTP request to the handler to join the game and get the player ID
+    const response = await fetch(MULTIPLAYER_SERVER + '/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({name: 'Player'})
+    });
+
+    if (!response.ok) {
+        alert('Error al unirse al juego');
+        return;
+    }
+
+    // player contains the player ID and name, returned from the backend
+    const player = await response.json();
+    playerId = player.id;
+
+    console.log('Joined as:', player);
+}
+
+joinGame();
+
+
+async function sendScore(points) {
+    if (!playerId) return;
+
+    if (lastScoreSent === points) return; // avoid sending the same score multiple times
+
+    lastScoreSent = points;
+
+    await fetch(MULTIPLAYER_SERVER + '/score', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            player_id: playerId,
+            points: points
+        })
+    });
+}
+
+
+async function sendGameOver(points) {
+    if (!playerId) return;
+
+    await fetch(MULTIPLAYER_SERVER + '/gameover', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            player_id: playerId,
+            points: points
+        })
+    });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // DETECCIÓN DEL TIPO DE PIEZA
 // ═══════════════════════════════════════════════════════════════
@@ -381,6 +443,8 @@ function parsearHUD(texto) {
     document.getElementById('hud-puntos').textContent = puntos;
     document.getElementById('hud-nivel').textContent  = nivel;
     document.getElementById('hud-lineas').textContent = lineas;
+
+    sendScore(Number(puntos));  // Enviar puntuación al backend
 
     // Actualizar preview si cambió
     const tipoNuevo = PIECE_NAMES.indexOf(sigNom);
@@ -594,15 +658,23 @@ function renderTablero(tablero) {
 
 const eventSource = new EventSource('/updates');
 
-eventSource.onmessage = function(event) {
+eventSource.onmessage = async function(event) {  // NOTE: async because sendGameOver is async
     const data = JSON.parse(event.data);
 
     if (data.game_over) {
-        location.replace('http://localhost:8080/gameover?points=' + data.points);
+        await sendGameOver(Number(data.points));  // Notify backend of game over
+
+        // TODO: keep watching the other player gameplay?
+
+        location.replace(
+          '/gameover?points=' + data.points
+          + "&player_id=" + playerId
+        );
+
         return;
     }
     if (data.win) {
-        location.replace('http://localhost:8080/win?points=' + data.points);
+        location.replace('/win?points=' + data.points);
         return;
     }
     if (data.is_text) {

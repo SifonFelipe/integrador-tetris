@@ -5,15 +5,43 @@ import (
 	"fmt"
 	"net/http"
 	"text/template"
+	"flag"
 )
+
+// vars for getting the server URL
+type IndexData struct {
+	MultiplayerServer string
+}
+
+var multiplayerServer string
 
 // Canal para enviar actualizaciones al cliente vía SSE
 var updates = make(chan string)
 
 func main() {
+	flag.StringVar(
+		&multiplayerServer,
+		"server",
+		"http://localhost:9000",
+		"Dirección del servidor de juego multijugador",
+	)
+
+	flag.Parse()
+
 	// Página principal del juego
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "index.html")
+		tmpl, err := template.ParseFiles("index.html")
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	
+		// INFO: passing the multiplayer server URL to the template
+		// to fetch from it
+		data := IndexData{MultiplayerServer: multiplayerServer}
+
+		tmpl.Execute(w, data)
 	})
 
 	// Ruta para manejar la solicitud POST del evento de teclado
@@ -38,20 +66,26 @@ func main() {
 }
 
 // ── Handlers de rutas ────────────────────────────────────────────────────────
-
 // gameoverHandler sirve la pantalla de game over con el puntaje final.
 func gameoverHandler(w http.ResponseWriter, r *http.Request) {
 	type PageData struct {
 		Points string
+		PlayerID string
+		MultiplayerServer string
 	}
+
 	data := PageData{
 		Points: r.URL.Query().Get("points"),
+		PlayerID: r.URL.Query().Get("player_id"),
+		MultiplayerServer: multiplayerServer,
 	}
+
 	tmpl, err := template.ParseFiles("gameover.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	err = tmpl.Execute(w, data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
