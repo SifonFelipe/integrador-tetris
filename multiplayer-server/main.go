@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 )
 
@@ -36,8 +37,7 @@ var currentMatch = Match{}
 
 
 func enableCORS(next http.HandlerFunc) http.HandlerFunc {
-	/* enableCORS is a middleware that enables CORS for the given handler.
-	CORS is needed to allow the frontend to make requests to the backend from a different origin. */
+	/* middleware function to enable CORS for the given handler. */
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
@@ -52,18 +52,55 @@ func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+
+func getLocalIp() (string, error) {
+	// Get the local IP address of the machine
+	addrs, err := net.InterfaceAddrs()
+
+	if err != nil {
+		return "", err
+	}
+
+	for _, addr := range addrs {
+
+		// verify if the address is an IP address and not a loopback address (127.0.0.1)
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no local IP address found")
+}
+
+
 func main() {
 	http.HandleFunc("/join", enableCORS(joinHandler))  // join the game
 	http.HandleFunc("/score", enableCORS(scoreHandler))  // update the score of a player
 	http.HandleFunc("/gameover", enableCORS(gameOverHandler))  // set the game over status for a player
 	http.HandleFunc("/match", enableCORS(matchHandler))  // get the current match status
 
-	fmt.Println("Multiplayer server running on :9000")
+	port := ":9000"
+	ipLocal, err := getLocalIp()
 
-	err := http.ListenAndServe(":9000", nil)
+	if err != nil {
+		fmt.Println("Error al obtener la IP local:", err)
+		ipLocal = "localhost"
+	}
+
+	listener, err := net.Listen("tcp", port)
 	if err != nil {
 		panic(err)
 	}
+
+	fmt.Printf("Servidor escuchando en http://%s%s\n", ipLocal, port)
+
+	err = http.Serve(listener, nil)
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 
