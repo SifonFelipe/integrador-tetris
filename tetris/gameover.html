@@ -33,6 +33,9 @@
 <p id="status">Esperando al otro jugador...</p>
 
 <script>
+    // DEV: hardcoded server URL for dev
+    const MULTIPLAYER_SERVER = 'http://localhost:9000';
+
     const gameOverText = document.getElementById("game-over");
     const text = gameOverText.innerText;
     const playerId = "{{.PlayerID}}";
@@ -52,7 +55,7 @@
     }
 
     async function checkMatch() {
-        const response = await fetch('/match');
+        const response = await fetch(MULTIPLAYER_SERVER + '/match');
 
         if (!response.ok) {
             console.error('Error obteniendo el estado del juego:', response.statusText);
@@ -64,6 +67,8 @@
       if (match.status !== 'finished') {
           return;
       }
+
+      clearInterval(intervalId);  // Detener el intervalo si el juego ha terminado
 
       showResult(match);
     }
@@ -89,7 +94,7 @@
         showLetters();
     }, 500); // Espera 2 segundos antes de mostrar las letras
 
-    setInterval(checkMatch, 1000); // Verifica el estado del juego cada segundo
+    const intervalId = setInterval(checkMatch, 1000); // Verifica el estado del juego cada segundo
     checkMatch();
 </script>
 </body>

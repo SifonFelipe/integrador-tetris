@@ -253,13 +253,17 @@ let tipoSiguiente   = -1;     // tipo de la siguiente pieza (del HUD)
 let clearingRows    = new Set(); // filas en animación de borrado
 
 // Online functions
+// DEV: hardcoded server URL for dev
+const MULTIPLAYER_SERVER = "{{.MultiplayerServer}}";
+
 let playerId = null;
 let lastScoreSent = null;
+
 
 async function joinGame() {
 
     // sends a HTTP request to the handler to join the game and get the player ID
-    const response = await fetch('/join', {
+    const response = await fetch(MULTIPLAYER_SERVER + '/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({name: 'Player'})
@@ -287,7 +291,7 @@ async function sendScore(points) {
 
     lastScoreSent = points;
 
-    await fetch('/score', {
+    await fetch(MULTIPLAYER_SERVER + '/score', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
@@ -301,7 +305,7 @@ async function sendScore(points) {
 async function sendGameOver(points) {
     if (!playerId) return;
 
-    await fetch('/gameover-server', {
+    await fetch(MULTIPLAYER_SERVER + '/gameover', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
