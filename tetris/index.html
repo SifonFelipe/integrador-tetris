@@ -258,66 +258,93 @@ let clearingRows    = new Set(); // filas en animación de borrado
 
 // Online functions
 const MULTIPLAYER_SERVER = "{{.MultiplayerServer}}";
-const PLAYER_NAME = "{{.PlayerName}}";
+const PLAYER_NAME = "{{.MultiplayerName}}";
 
 let playerId = null;
 let lastScoreSent = null;
 
+let rivalPollingActive = false;
+let rivalPollingStopped = false;
+
 
 async function joinGame() {
+    try {
 
-    // sends a HTTP request to the handler to join the game and get the player ID
-    const response = await fetch(MULTIPLAYER_SERVER + '/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({name: PLAYER_NAME})
-    });
+        // sends a HTTP request to the handler to join the game and get the player ID
+        const response = await fetch(MULTIPLAYER_SERVER + '/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({name: PLAYER_NAME})
+        });
 
-    if (!response.ok) {
-        alert('Error al unirse al juego');
-        return;
+        if (!response.ok) {
+            alert('Error al unirse al juego');
+            return;
+        }
+
+        // player contains the player ID and name, returned from the backend
+        const player = await response.json();
+        playerId = player.id;
+
+        console.log('Joined as:', player);
+
+        pollRivalData();  // start polling
+
+    } catch (error) {
+        console.error('Error joining game:', error);
     }
-
-    // player contains the player ID and name, returned from the backend
-    const player = await response.json();
-    playerId = player.id;
-
-    console.log('Joined as:', player);
 }
 
 
-let polling = false;
-
 async function fetchRivalData() {
-    /* Fetches rival score/name from the server */
-    if (polling) return; // avoid overlapping requests
+    if (!playerId) return;
+    
+    // prevent multiple concurrent polls
+    if (rivalPollingActive) return;
 
-    polling = true;
+    rivalPollingActive = true;
 
     try {
-        const response = await fetch(MULTIPLAYER_SERVER + '/rival', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-            body: JSON.stringify({player_id: playerId})
-        });
-
+        const response = await fetch(MULTIPLAYER_SERVER + '/rival/' + playerId);
 
         if (!response.ok) {
-            console.error('Error fetching rival data:', response.status);
+            console.error('Error fetching rival data');
             return;
         }
 
         const data = await response.json();
-        console.log(data);
 
-        document.getElementById('rival-name').textContent = data.rival.name || 'Tu Rival';
-        document.getElementById('rival-score').textContent = data.rival.points || '0';
+        // DEV: log rival data
+        console.log('Rival data:', data);
+
+        if (data.rival) {
+            document.getElementById('rival-name').textContent = data.rival.name || 'Tu Rival';
+            document.getElementById('rival-score').textContent = data.rival.points || '0';
+        } else {
+            document.getElementById('rival-name').textContent = 'Esperando rival...';
+            document.getElementById('rival-score').textContent = '0';
+        }
 
     } catch (error) {
         console.error('Error fetching rival data:', error);
+
     } finally {
-        polling = false;
+        rivalPollingActive = false;
     }
+}
+
+
+async function pollRivalData() {
+    if (rivalPollingStopped) return;
+
+    await fetchRivalData();
+
+    setTimeout(pollRivalData, 5000);  // poll every 5 seconds
+}
+
+
+function stopRivalPolling() {
+    rivalPollingStopped = true;
 }
 
 
@@ -700,6 +727,8 @@ eventSource.onmessage = async function(event) {  // NOTE: async because sendGame
     const data = JSON.parse(event.data);
 
     if (data.game_over) {
+        stopRivalPolling();  // Stop polling rival data
+
         await sendGameOver(Number(data.points));  // Notify backend of game over
 
         // TODO: keep watching the other player gameplay?

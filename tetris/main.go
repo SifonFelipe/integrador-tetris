@@ -182,10 +182,12 @@ func enviarActualizacionTablero(tablero [constCantFilasTablero][constCantColumna
 	updates <- string(update)
 }
 
+
 // enviarActualizacionTexto envía un mensaje de texto al cliente (puntos, nivel, etc.).
 func enviarActualizacionTexto(text string) {
 	updates <- "{\"is_text\": true, \"text\": \"" + text + "\"}"
 }
+
 
 // enviarGameOver envía la señal de fin de juego con el puntaje final.
 func enviarGameOver(points int) {
@@ -193,6 +195,7 @@ func enviarGameOver(points int) {
 	updates <- texto
 	fmt.Println("Game Over. Points:", points)
 }
+
 
 // enviarWin envía la señal de victoria con el puntaje (para personalizaciones).
 func enviarWin(points int) {
