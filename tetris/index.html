@@ -305,7 +305,11 @@ async function fetchRivalData() {
     rivalPollingActive = true;
 
     try {
-        const response = await fetch(MULTIPLAYER_SERVER + '/rival/' + playerId);
+        const response = await fetch(MULTIPLAYER_SERVER + '/rival', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({player_id: playerId})
+        });
 
         if (!response.ok) {
             console.error('Error fetching rival data');
