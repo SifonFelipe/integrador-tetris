@@ -89,7 +89,7 @@ func main() {
 	http.HandleFunc("/score", enableCORS(scoreHandler))  // update the score of a player
 	http.HandleFunc("/gameover", enableCORS(gameOverHandler))  // set the game over status for a player
 	http.HandleFunc("/match", enableCORS(matchHandler))  // get the current match status
-	http.HandleFunc("/rival", enableCORS(rivalHandler))  // get the rival's information
+	http.HandleFunc("/rival/", enableCORS(rivalHandler))  // get the rival's information
 
 	port := ":9000"
 	ipLocal, err := getLocalIp()
@@ -110,7 +110,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 }
 
 
@@ -292,13 +291,10 @@ func rivalHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data struct {
-		PlayerID string `json:"player_id"`
-	}
+	playerID := r.URL.Path[len("/rival/"):]  // extract the player ID from the URL path
 
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		http.Error(w, "JSON inválido", http.StatusBadRequest)
+	if playerID == '' {
+		http.Error(w, "ID de jugador no proporcionado", http.StatusBadRequest)
 		return
 	}
 
