@@ -293,16 +293,16 @@ func rivalHandler(w http.ResponseWriter, r *http.Request) {
 
 	playerID := r.URL.Path[len("/rival/"):]  // extract the player ID from the URL path
 
-	if playerID == '' {
+	if playerID == "" {
 		http.Error(w, "ID de jugador no proporcionado", http.StatusBadRequest)
 		return
 	}
 
 	var rival *Player
 
-	if currentMatch.Player1 != nil && currentMatch.Player1.ID == data.PlayerID {
+	if currentMatch.Player1 != nil && currentMatch.Player1.ID == playerID {
 		rival = currentMatch.Player2
-	} else if currentMatch.Player2 != nil && currentMatch.Player2.ID == data.PlayerID {
+	} else if currentMatch.Player2 != nil && currentMatch.Player2.ID == playerID {
 		rival = currentMatch.Player1
 	} else {
 		http.Error(w, "Jugador no encontrado", http.StatusNotFound)
