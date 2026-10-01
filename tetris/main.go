@@ -11,9 +11,13 @@ import (
 // vars for getting the server URL
 type IndexData struct {
 	MultiplayerServer string
+	MultiplayerName string
 }
 
-var multiplayerServer string
+var (
+	multiplayerServer string
+ 	multiplayerName string
+)
 
 // Canal para enviar actualizaciones al cliente vía SSE
 var updates = make(chan string)
@@ -24,6 +28,12 @@ func main() {
 		"server",
 		"http://localhost:9000",
 		"Dirección del servidor de juego multijugador",
+	)
+	flag.StringVar(
+		&multiplayerName,
+		"name",
+		"Player",
+		"Nombre del jugador para el juego multijugador",
 	)
 
 	flag.Parse()
@@ -39,7 +49,10 @@ func main() {
 	
 		// INFO: passing the multiplayer server URL to the template
 		// to fetch from it
-		data := IndexData{MultiplayerServer: multiplayerServer}
+		data := IndexData{
+			MultiplayerServer: multiplayerServer
+			MultiplayerName: multiplayerName
+		}
 
 		tmpl.Execute(w, data)
 	})
@@ -113,6 +126,7 @@ func winHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // updatesHandler mantiene la conexión SSE abierta y envía actualizaciones al cliente.
+// FIXME: this handler does not handle client disconnects. Maybe the cause of the lag in the game?
 func updatesHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")

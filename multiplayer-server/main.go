@@ -14,6 +14,7 @@ const (
 	constMatchDraw = "draw"
 )
 
+
 type Player struct {
 	ID string `json:"id"`
 	Name string `json:"name"`
@@ -21,10 +22,12 @@ type Player struct {
 	GameOver bool `json:"game_over"`
 }
 
+
 type Match struct {
 	Player1 *Player `json:"player1"`
 	Player2 *Player `json:"player2"`
 }
+
 
 type MatchResponse struct {
 	Player1 *Player `json:"player1"`
@@ -32,6 +35,12 @@ type MatchResponse struct {
 	Status string `json:"status"`
 	Result string `json:"result"`
 }
+
+
+type RivalResponse struct {
+	Rival *Player `json:"rival"`
+}
+
 
 var currentMatch = Match{}
 
@@ -80,6 +89,7 @@ func main() {
 	http.HandleFunc("/score", enableCORS(scoreHandler))  // update the score of a player
 	http.HandleFunc("/gameover", enableCORS(gameOverHandler))  // set the game over status for a player
 	http.HandleFunc("/match", enableCORS(matchHandler))  // get the current match status
+	http.HandleFunc("/rival", enableCORS(rivalHandler))  // get the rival's information
 
 	port := ":9000"
 	ipLocal, err := getLocalIp()
@@ -275,3 +285,35 @@ func gameOverHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 
+func rivalHandler(w http.ResponseWriter, r *http.Request) {
+	/* rivalHandler handles the requests to get the rival's information. */
+	if r.Method != http.MethodGet {  // only accept GET requests
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var data struct {
+		PlayerID string `json:"player_id"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		http.Error(w, "JSON inválido", http.StatusBadRequest)
+		return
+	}
+
+	var rival *Player
+
+	if currentMatch.Player1 != nil && currentMatch.Player1.ID == data.PlayerID {
+		rival = currentMatch.Player2
+	} else if currentMatch.Player2 != nil && currentMatch.Player2.ID == data.PlayerID {
+		rival = currentMatch.Player1
+	} else {
+		http.Error(w, "Jugador no encontrado", http.StatusNotFound)
+		return
+	}
+
+	response := RivalResponse{Rival: rival}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}

@@ -170,6 +170,10 @@
             <div class="panel-value" id="hud-puntos">0</div>
         </div>
         <div class="panel-box">
+            <div class="panel-label" id="rival-name">Tu Rival</div>
+            <div class="panel-value" id="rival-score">0</div>
+        </div>
+        <div class="panel-box">
             <div class="panel-label">Nivel</div>
             <div class="panel-value" id="hud-nivel">1</div>
         </div>
@@ -254,6 +258,7 @@ let clearingRows    = new Set(); // filas en animación de borrado
 
 // Online functions
 const MULTIPLAYER_SERVER = "{{.MultiplayerServer}}";
+const PLAYER_NAME = "{{.PlayerName}}";
 
 let playerId = null;
 let lastScoreSent = null;
@@ -265,7 +270,7 @@ async function joinGame() {
     const response = await fetch(MULTIPLAYER_SERVER + '/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({name: 'Player'})
+        body: JSON.stringify({name: PLAYER_NAME})
     });
 
     if (!response.ok) {
@@ -280,7 +285,40 @@ async function joinGame() {
     console.log('Joined as:', player);
 }
 
-joinGame();
+
+let polling = false;
+
+async function fetchRivalData() {
+    /* Fetches rival score/name from the server */
+    if (polling) return; // avoid overlapping requests
+
+    polling = true;
+
+    try {
+        const response = await fetch(MULTIPLAYER_SERVER + '/rival', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+            body: JSON.stringify({player_id: playerId})
+        });
+
+
+        if (!response.ok) {
+            console.error('Error fetching rival data:', response.status);
+            return;
+        }
+
+        const data = await response.json();
+        console.log(data);
+
+        document.getElementById('rival-name').textContent = data.rival.name || 'Tu Rival';
+        document.getElementById('rival-score').textContent = data.rival.points || '0';
+
+    } catch (error) {
+        console.error('Error fetching rival data:', error);
+    } finally {
+        polling = false;
+    }
+}
 
 
 async function sendScore(points) {
@@ -699,6 +737,12 @@ document.addEventListener('keydown', function(event) {
         body: JSON.stringify({ key: event.key })
     });
 });
+
+
+joinGame();
+setInterval(fetchRivalData, 5000);
+
+
 </script>
 </body>
 </html>
