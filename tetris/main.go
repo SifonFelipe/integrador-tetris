@@ -50,8 +50,8 @@ func main() {
 		// INFO: passing the multiplayer server URL to the template
 		// to fetch from it
 		data := IndexData{
-			MultiplayerServer: multiplayerServer
-			MultiplayerName: multiplayerName
+			MultiplayerServer: multiplayerServer,
+			MultiplayerName: multiplayerName,
 		}
 
 		tmpl.Execute(w, data)
