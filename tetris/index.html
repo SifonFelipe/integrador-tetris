@@ -261,7 +261,7 @@ const MULTIPLAYER_SERVER = "{{.MultiplayerServer}}";
 const PLAYER_NAME = "{{.MultiplayerName}}";
 
 
-let playerId = "{{.PlayerID}}";
+let playerId = "{{.MultiplayerID}}";
 let lastScoreSent = null;
 
 let rivalPollingActive = false;
@@ -269,6 +269,12 @@ let rivalPollingStopped = false;
 
     
 async function joinGame() {
+    if (playerId) {
+        console.log('Already joined with player ID:', playerId);
+        pollRivalData();  // start polling
+        return;
+    }
+
     try {
 
         // sends a HTTP request to the handler to join the game and get the player ID
@@ -287,6 +293,8 @@ async function joinGame() {
         const player = await response.json();
         playerId = player.id;
 
+        await assignPlayerID();  // assign the player ID to the session
+
         console.log('Joined as:', player);
 
         pollRivalData();  // start polling
@@ -301,6 +309,7 @@ async function assignPlayerID() {
     // send a request to the backend to assign the player ID given from the multiplayer server
     // to the current session, so that the backend can identify the player in future requests
     if (!playerId) {
+        console.error('Cannot assign player ID: playerId is null');
         return;
     }
 
@@ -315,6 +324,7 @@ async function assignPlayerID() {
             console.error('Error assigning player ID to session');
             return;
         }
+
     } catch (error) {
         console.error('Error assigning player ID to session:', error);
     }

@@ -159,16 +159,18 @@ func main() {
 
 // ── Handlers de rutas ────────────────────────────────────────────────────────
 func joinServerHandler(w http.ResponseWriter, r *http.Request) {
-	var IDAssigned string
+	var data struct {
+		PlayerID string `json:"player_id"`
+	}
 
-	err := json.NewDecoder(r.Body).Decode(&IDAssigned)
+	err := json.NewDecoder(r.Body).Decode(&data)
 
 	if err != nil {
 		http.Error(w, "Error al leer los datos JSON", http.StatusBadRequest)
 		return
 	}
 
-	Self.ID = IDAssigned
+	Self.ID = data.PlayerID
 
 	w.WriteHeader(http.StatusOK)
 }
