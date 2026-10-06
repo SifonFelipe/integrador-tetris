@@ -298,6 +298,29 @@ async function joinGame() {
 
 
 async function assignPlayerID() {
+    // send a request to the backend to assign the player ID given from the multiplayer server
+    // to the current session, so that the backend can identify the player in future requests
+    if (!playerId) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({player_id: playerId})
+        });
+
+        if (!response.ok) {
+            console.error('Error assigning player ID to session');
+            return;
+        }
+    } catch (error) {
+        console.error('Error assigning player ID to session:', error);
+    }
+
+}
+    
     
 
 async function fetchRivalData() {
