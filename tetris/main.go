@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"text/template"
 	"flag"
-	"sync"
 )
 
 // vars for getting the server URL
@@ -16,6 +15,7 @@ type IndexData struct {
 	MultiplayerID string
 }
 
+// vars to connect to the multiplayer server and save the player name and ID
 var (
 	multiplayerServer string
  	multiplayerName string
@@ -35,61 +35,13 @@ var Self = &Player{
 // var updates = make(chan string)
 // NOTE: channel removed because can't handle client session storage,
 // so the game will lag if multiple clients are connected at the same time
+// also, it cannot remove connections (lag reason)
 
 // implementing a hub for broadcasting updates to all clients
-type Hub struct {
-	mu sync.Mutex  // prevents race conditions when accessing the clients map
-	clients map[chan string]struct{}
-}
+// in hub_channels.go file
 
 var updates = &Hub{
 	clients: make(map[chan string]struct{}),
-}
-
-
-// client subscription management
-func (h *Hub) Subscribe() chan string {
-	channel := make(chan string, 32)
-
-	h.mu.Lock()
-	h.clients[channel] = struct{}{}  // dummy value
-	h.mu.Unlock()
-
-	return channel
-}
-
-
-func (h *Hub) Unsubscribe(channel chan string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	_, exists := h.clients[channel]
-
-	if !exists {
-		return
-	}
-
-	delete(h.clients, channel)
-	close(channel)
-}
-
-
-// Broadcast sends a message to all subscribed clients.
-func (h *Hub) Broadcast(message string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	for channel := range h.clients {
-		select {
-			case channel <- message:
-				// message sent successfully
-
-			default:
-				// disconnect a client which queue is full (not reading)
-				delete(h.clients, channel)
-				close(channel)
-		}
-	}
 }
 
 
