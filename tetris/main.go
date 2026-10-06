@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"text/template"
 	"flag"
+	"sync"
 )
 
 // vars for getting the server URL
 type IndexData struct {
 	MultiplayerServer string
 	MultiplayerName string
+	MultiplayerID string
 }
 
 var (
@@ -19,8 +21,77 @@ var (
  	multiplayerName string
 )
 
+type Player struct {
+	ID string
+	Name string
+}
+
+var Self = &Player{
+	ID: "",
+	Name: "",
+}
+
 // Canal para enviar actualizaciones al cliente vía SSE
-var updates = make(chan string)
+// var updates = make(chan string)
+// NOTE: channel removed because can't handle client session storage,
+// so the game will lag if multiple clients are connected at the same time
+
+// implementing a hub for broadcasting updates to all clients
+type Hub struct {
+	mu sync.Mutex  // prevents race conditions when accessing the clients map
+	clients map[chan string]struct{}
+}
+
+var updates = &Hub{
+	clients: make(map[chan string]struct{}),
+}
+
+
+// client subscription management
+func (h *Hub) Subscribe() chan string {
+	channel := make(chan string, 32)
+
+	h.mu.Lock()
+	h.clients[channel] = struct{}{}  // dummy value
+	h.mu.Unlock()
+
+	return channel
+}
+
+
+func (h *Hub) Unsubscribe(channel chan string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	_, exists := h.clients[channel]
+
+	if !exists {
+		return
+	}
+
+	delete(h.clients, channel)
+	close(channel)
+}
+
+
+// Broadcast sends a message to all subscribed clients.
+func (h *Hub) Broadcast(message string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for channel := range h.clients {
+		select {
+			case channel <- message:
+				// message sent successfully
+
+			default:
+				// disconnect a client which queue is full (not reading)
+				delete(h.clients, channel)
+				close(channel)
+		}
+	}
+}
+
 
 func main() {
 	flag.StringVar(
@@ -29,6 +100,7 @@ func main() {
 		"http://localhost:9000",
 		"Dirección del servidor de juego multijugador",
 	)
+
 	flag.StringVar(
 		&multiplayerName,
 		"name",
@@ -37,6 +109,8 @@ func main() {
 	)
 
 	flag.Parse()
+
+	Self.Name = multiplayerName
 
 	// Página principal del juego
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +125,8 @@ func main() {
 		// to fetch from it
 		data := IndexData{
 			MultiplayerServer: multiplayerServer,
-			MultiplayerName: multiplayerName,
+			MultiplayerName: Self.Name,
+			MultiplayerID: Self.ID,
 		}
 
 		tmpl.Execute(w, data)
@@ -69,6 +144,9 @@ func main() {
 	// Pantalla de Win (tablero completado)
 	http.HandleFunc("/win", winHandler)
 
+	// assign ID provided by the multiplayer server to the player
+	http.HandleFunc("/join", joinServerHandler)
+
 	// Inicia la goroutine con el loop principal del juego
 	go generarEventos()
 
@@ -78,7 +156,24 @@ func main() {
 	http.ListenAndServe(":8080", nil)
 }
 
+
 // ── Handlers de rutas ────────────────────────────────────────────────────────
+func joinServerHandler(w http.ResponseWriter, r *http.Request) {
+	var IDAssigned string
+
+	err := json.NewDecoder(r.Body).Decode(&IDAssigned)
+
+	if err != nil {
+		http.Error(w, "Error al leer los datos JSON", http.StatusBadRequest)
+		return
+	}
+
+	Self.ID = IDAssigned
+
+	w.WriteHeader(http.StatusOK)
+}
+
+
 // gameoverHandler sirve la pantalla de game over con el puntaje final.
 func gameoverHandler(w http.ResponseWriter, r *http.Request) {
 	type PageData struct {
@@ -105,6 +200,7 @@ func gameoverHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
 // winHandler sirve la pantalla de victoria (tablero lleno de líneas completadas — no aplica en Tetris,
 // pero se deja disponible para la personalización).
 func winHandler(w http.ResponseWriter, r *http.Request) {
@@ -125,19 +221,45 @@ func winHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+
 // updatesHandler mantiene la conexión SSE abierta y envía actualizaciones al cliente.
-// FIXME: this handler does not handle client disconnects. Maybe the cause of the lag in the game?
+// INFO: this handler is called by the client to receive updates from the server in real-time.
 func updatesHandler(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+
+	if !ok {
+		http.Error(w, "Streaming no soportado", http.StatusInternalServerError)
+		return
+	}
+
+	clientUpdates := updates.Subscribe()
+	fmt.Println("Client connected to updates")
+
+	defer updates.Unsubscribe(clientUpdates)
+
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
+
+	flusher.Flush()
 
 	for {
-		update := <-updates
-		fmt.Fprintf(w, "data: %s\n\n", update)
-		w.(http.Flusher).Flush()
+		select {
+			case <-r.Context().Done():  // disconnect 
+				return
+			case update, ok := <-clientUpdates:  // receive updates from the hub (where broadcasted)
+				if !ok {
+					return  // channel closed, exit the handler
+				}
+
+				if _, err := fmt.Fprintf(w, "data: %s\n\n", update); err != nil {
+					return
+				}
+
+				flusher.Flush()			
+			}
 	}
 }
+
 
 // keyPressHandler recibe las teclas presionadas por el usuario y actualiza
 // las variables globales de control del juego.
@@ -175,24 +297,27 @@ func keyPressHandler(w http.ResponseWriter, r *http.Request) {
 // enviarActualizacionTablero convierte el tablero en JSON y lo envía al cliente.
 func enviarActualizacionTablero(tablero [constCantFilasTablero][constCantColumnasTablero]string) {
 	update, err := json.Marshal(tablero)
+
 	if err != nil {
 		fmt.Println("Error al convertir la matriz en JSON:", err)
 		return
 	}
-	updates <- string(update)
+
+	updates.Broadcast(string(update))
 }
 
 
 // enviarActualizacionTexto envía un mensaje de texto al cliente (puntos, nivel, etc.).
 func enviarActualizacionTexto(text string) {
-	updates <- "{\"is_text\": true, \"text\": \"" + text + "\"}"
+	updates.Broadcast("{\"is_text\": true, \"text\": \"" + text + "\"}")
 }
 
 
 // enviarGameOver envía la señal de fin de juego con el puntaje final.
 func enviarGameOver(points int) {
 	texto := fmt.Sprint("{\"game_over\": true, \"points\": \"", points, "\"}")
-	updates <- texto
+	updates.Broadcast(texto)
+
 	fmt.Println("Game Over. Points:", points)
 }
 
@@ -200,6 +325,6 @@ func enviarGameOver(points int) {
 // enviarWin envía la señal de victoria con el puntaje (para personalizaciones).
 func enviarWin(points int) {
 	texto := fmt.Sprint("{\"win\": true, \"points\": \"", points, "\"}")
-	updates <- texto
+	updates.Broadcast(texto)
 	fmt.Println("Win. Points:", points)
 }

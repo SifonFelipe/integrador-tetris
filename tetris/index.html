@@ -260,13 +260,14 @@ let clearingRows    = new Set(); // filas en animación de borrado
 const MULTIPLAYER_SERVER = "{{.MultiplayerServer}}";
 const PLAYER_NAME = "{{.MultiplayerName}}";
 
-let playerId = null;
+
+let playerId = "{{.PlayerID}}";
 let lastScoreSent = null;
 
 let rivalPollingActive = false;
 let rivalPollingStopped = false;
 
-
+    
 async function joinGame() {
     try {
 
@@ -295,6 +296,9 @@ async function joinGame() {
     }
 }
 
+
+async function assignPlayerID() {
+    
 
 async function fetchRivalData() {
     if (!playerId) return;
