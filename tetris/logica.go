@@ -487,32 +487,32 @@ func rotarPieza(
 	tipoPieza int,
 	rotacionActual *int,
 ) {
-	// TODO: wallkick mentioned in the instructions, but not implemented here.
-	var (
-		new_col int
-		new_row int
-	)
-
 	activeShape := obtenerFormaRotacion(tipoPieza, *rotacionActual)
 	nextRotation := (*rotacionActual + 1) % 4
-	newShape := obtenerFormaRotacion(tipoPieza, nextRotation % 4)
 
-	var newPiece [4][constCantColumnasPieza]int
+	newShape := obtenerFormaRotacion(tipoPieza, nextRotation)
+	originRow := piezaActiva[0][0] - activeShape[0][0]
+	originCol := piezaActiva[0][1] - activeShape[0][1]
 
-	var originRow int = piezaActiva[0][0] - activeShape[0][0]
-	var originCol int = piezaActiva[0][1] - activeShape[0][1]
-
-
-	for idx, position := range newShape {
-		new_row = originRow + position[0]
-		new_col = originCol + position[1]
-
-		newPiece[idx] = [2]int{new_row, new_col}
+	// first try with the normal rotation, then try to move it away from walls and floor.
+	// The first valid rotation will be applied. If none is valid, the piece will remain in its original position.
+	kicks := [...][2]int{
+		{0, 0}, {0, -1}, {0, 1}, {0, -2}, {0, 2},
+		{-1, 0}, {-1, -1}, {-1, 1}, {-2, 0},
 	}
-
-	if !colisionaConTablero(tablero, newPiece) {
-		*piezaActiva = newPiece
-		*rotacionActual = nextRotation
+	for _, kick := range kicks {
+		var newPiece [4][constCantColumnasPieza]int
+		for idx, position := range newShape {
+			newPiece[idx] = [2]int{
+				originRow + position[0] + kick[0],
+				originCol + position[1] + kick[1],
+			}
+		}
+		if !colisionaConTablero(tablero, newPiece) {
+			*piezaActiva = newPiece
+			*rotacionActual = nextRotation
+			return
+		}
 	}
 }
 
@@ -607,8 +607,6 @@ func verificarLineasCompletas(
 	case 4:
 		*puntos += constPuntos4Lineas
 	}
-
-	fmt.Println("Líneas eliminadas:", eliminadas, " | Total:", *lineasEliminadas+eliminadas, " | Puntos:", *puntos)
 
 	// Actualizar contadores globales
 	*lineasEliminadas += eliminadas
