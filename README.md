@@ -71,11 +71,7 @@ curl http://192.168.68.103:9000
 ```
 
 ## Problemas a Arreglar:
-1. Cuando carga la página busca conectarse al servidor. Si tenés el localhost abierto de antes y corrés después, no va a intentar conectarse.
-
-2. Si hacés un refresh de la sesión, se olvida tu sesión anterior en el servidor y te intentás conectar como un nuevo jugador.
-
-3. Fácilmente exploiteable, el puntaje se manda por requests HTTP, sin ningún token.
+1. Fácilmente exploiteable, el puntaje se manda por requests HTTP, sin ningún token.
 
 ## TODOs:
 1. Pasar a websockets para ver actualizaciones del rival, manejar sesiones.

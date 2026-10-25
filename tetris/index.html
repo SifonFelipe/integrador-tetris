@@ -354,7 +354,7 @@ async function fetchRivalData() {
         const data = await response.json();
 
         // DEV: log rival data
-        console.log('Rival data:', data);
+        // console.log('Rival data:', data);
 
         if (data.rival) {
             document.getElementById('rival-name').textContent = data.rival.name || 'Tu Rival';

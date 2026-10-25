@@ -53,7 +53,7 @@ const (
 
 var (
 	direccionCol   int  // -1 = izquierda, 0 = quieto, 1 = derecha
-	rotarPiezaFlag bool // true cuando el usuario presiona ↑
+	rotarPiezaFlag bool // true cuando el usuario presion KeyUp
 	acelerarCaidaFlag bool // true cuando el usuario presion KeyDown
 	descenso int  // valor de descenso (ms)
 	siguientePieza [4][constCantColumnasPieza]int // posición de la siguiente pieza (para mostrarla en el cliente)
